@@ -1,0 +1,61 @@
+## Para obtener este script a traves de internet
+## wget -O /tmp/prepare-server http://pastebin.com/raw/E6abWNZb 
+## cat /tmp/prepare-server | tr '\r' ' ' > prepare-server.sh && rm /tmp/prepare-server
+
+ROOT_UID=0
+SUCCESS=0
+ 
+# Es necesario ejecutar como root.
+if [ "$UID" -ne "$ROOT_UID" ]
+then
+  echo "Necesitas ser root para ejecutar el script."
+  exit 0
+fi
+
+# Agregamos al fichero de resolucion de nombres (DNS) nuestra IP Publica y Dominio
+sed -i "1s/^/$(ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')       www.$(hostname).$(dnsdomainname) $(hostname).$(dnsdomainname)\n/" /etc/hosts
+
+# Acceso sftp para usuarios  
+### · Crear grupo sftponly
+groupadd -r sftponly
+### · Editar fichero de configuracion del servidor ssh
+echo "
+# Jaula para usuarios con acceso sftp
+# Descomentar PasswordAuthentication para
+# forzar el acceso con clave privada.
+Subsystem sftponly internal-sftp
+Match Group sftponly
+    ChrootDirectory %h
+    ForceCommand internal-sftp
+    AllowTcpForwarding no
+    X11Forwarding no
+    #PasswordAuthentication no
+" >> /etc/ssh/sshd_config
+### · Reiniciar el servidor ssh
+service sshd restart
+
+# Instalacion
+apt-get --assume-yes install dnsmasq apache2
+# apt-get install mysql-server php php-mysql libapache2-mod-php php-zip php-xml php-curl php-mcrypt php-gd php-soap php-intl
+
+# Crear carpetas para almacenar certificados y claves privadas.
+mkdir -v /etc/apache2/ssl
+mkdir -v /etc/apache2/ssl/private
+# Cambio de propietario sobre las carpetas
+chown -vR root:root /etc/apache2/ssl/
+chown -vR root:ssl-cert /etc/apache2/ssl/private/
+# Cambio de permisos sobre las carpetas
+chmod -v 644 /etc/apache2/ssl
+chmod -v 640 /etc/apache2/ssl/private
+
+## Activacion del modulo SSL (https) en apache2
+#apache2ctl -M
+a2enmod ssl
+service apache2 restart
+
+## Obtenemos a través de Internet el script que automatiza el proceso de creacion de los usuarios y sus sitios web.
+wget -O /tmp/create-hosting-user http://pastebin.com/raw/nYH5X37W 
+cat /tmp/create-hosting-user | tr '\r' ' ' > create-hosting-user.sh && rm /tmp/create-hosting-user
+## Obtenemos la plantilla que utiliza el script para crear los sitios web de cada usuario.
+wget -O /tmp/template http://pastebin.com/raw/ZtAaNr5h
+cat /tmp/template | tr '\r' ' ' > /etc/apache2/sites-available/template.conf && rm /tmp/template
