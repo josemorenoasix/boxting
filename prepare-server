@@ -25,16 +25,17 @@ apt-get --assume-yes install dnsmasq apache2 libapache2-mod-php mariadb-server p
 a2dismod -f auth_basic
 a2enmod rewrite
 a2enmod ssl
+cp /etc/apache2/sites-enabled/000-default.conf /etc/apache2/sites-enabled/000-default.conf.bak
 echo "
 <VirtualHost *:80>
         ServerName localhost
         DocumentRoot /var/www/html
         Redirect 403 /
-        ErrorDocument 403 "No se permite el acceso via IP."
+        ErrorDocument 403 'No se permite el acceso via IP.'
         ErrorLog ${APACHE_LOG_DIR}/error.log
         CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
-" >>  /etc/apache2/sites-enabled/000-default.conf
+" >  /etc/apache2/sites-enabled/000-default.conf
 service apache2 restart
 
 
