@@ -1,0 +1,110 @@
+#!/bin/bash
+
+# COMO FUNCIONA
+# $bash create-hosting-user.sh username password domain.tld
+# Argumentos
+# - username (si el usuario existe lo utiliza, en caso contrario lo crea)
+# - user password (si el usuario existe no se tiene en cuenta el parametro)
+# - domain name (se utiliza en la ruta del sitio web y el fichero de configuracion de apache)
+
+ROOT_UID=0
+SUCCESS=0
+
+# Es necesario ejecutar como root.
+if [ "$UID" -ne "$ROOT_UID" ]
+then
+  echo "Necesitas ser root para ejecutar el script."
+  exit 0
+fi
+
+# Comprueba los argumentos
+if [ $# -eq 3 ]; then
+    echo "EJECUTANDO $0"
+    echo "#############"
+    echo ""
+    # Asigna las variables
+    username=$1
+    pass=$2
+    domain=$3
+    email="webmaster@$domain"
+    webroot="/home/$username/www/$domain/public"
+    ipaddress=$(ifconfig | grep 'Direc. inet:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')
+
+    # Comprueba si el usuario existe.
+    echo -n "Existe el usuario? -- "
+    grep -q "$username" /etc/passwd
+    if [ ! $? -eq $SUCCESS ]; then
+        echo "NO"
+        # Crea el usuario
+        useradd -p "$(mkpasswd "$pass")" -d /home/"$username" -m -g users -s /bin/false "$username"
+        # Agrega el usuario al grupo sftp (servicio ssh)
+        usermod -aG sftponly "$username"
+        # Agrega el usuario al grupo www-data (servicio web apache2)
+        usermod -aG www-data "$username"
+        echo "La cuenta del usuario $username ha sido creada."
+    # Si el usuario existe no realiza ningun cambio.
+    else
+        echo "SI - SIN CAMBIOS"
+    fi
+
+    # Comprueba si existe el directorio web
+    echo ""
+    echo -n "Existe el directorio? -- "
+    if [ ! -d "$webroot" ]; then
+        echo "NO"
+        echo "Creando el directorio web: $webroot"
+        mkdir -p "$webroot"
+        # Enjaulando USERHOME
+        chown root:root /home/"$username"
+        # Permisos para sftp
+        chown -R "$username":sftponly /home/"$username"/*
+        # Permisos para apache
+        chown -R "$username":www-data "$webroot"
+        # Solo escritura propietario
+        chmod -R 0755 "$webroot"
+        # Creando la clave publico privada para el dominio.
+        openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj "/C=ES/ST=Valencia/L=Gandia/O=boxting.ltd/OU=Boxting SSL Unit /CN=www.$domain" -keyout /etc/apache2/ssl/private/"$domain".key -out /etc/apache2/ssl/"$domain".crt
+        echo "La clave publico/privada del usuario $username ha sido creada."
+        # Creando fichero de bienvenida index.html
+        echo "<h1>Bienvenido a tu nuevo espacio web</h1>
+            <h3>Accesible via sFTP con tu clave de usuario</h3>" > "$webroot"/index.html
+    # Si el directorio web ya existe no realiza ningun cambio.
+    else
+        echo "SI - SIN CAMBIOS"
+        echo "Ruta: $webroot"
+    fi
+
+    # Configurando la plantilla Virtualhost segun los parametros introducidos
+    echo ""
+    echo -n "Existe la plantilla VirtualHost? -- "
+    if [ -f /etc/apache2/sites-available/template.conf ]; then
+        echo "SI"
+        cp /etc/apache2/sites-available/template.conf /etc/apache2/sites-available/"$domain".conf
+        sed -i 's/template.email/'"$email"'/g' /etc/apache2/sites-available/"$domain".conf
+        sed -i 's/template.url/'"$domain"'/g' /etc/apache2/sites-available/"$domain".conf
+        sed -i 's#template.webroot#'"$webroot"'#g' /etc/apache2/sites-available/"$domain".conf
+        echo "Agregando $domain al fichero /etc/hosts"
+        sed -i "1s/^/$ipaddress       www.$domain $domain\n/" /etc/hosts
+        #sed -i "1s/^/127.0.0.1       $domain\n/" /etc/hosts
+        a2ensite "$domain" > /dev/null 2>&1
+        service apache2 reload
+        echo "Nombre del fichero de configuracion del VirtualHost: /etc/apache2/sites-available/$domain.conf"
+        echo "Ruta del directorio web: $webroot"
+        echo "Accesible desde http(s)://$domain"
+        service dnsmasq restart
+    # Si no existe la plantilla muestra el error.
+    else
+        echo "NO -- VirtualHost NO CONFIGURADO"
+        echo "Imposible encontrar el fichero /etc/apache2/sites-available/template.conf"
+        exit 0
+    fi
+    echo ""
+    echo "#############"
+    echo "FINALIZANDO CON EXITO: $0"
+# Si no se le pasan 3 parametros al script muestra el error
+else
+        echo  " Este script necesita 3 argumentos tan solo has introducido $#"
+        echo  " Debes ejecutar el script $0 username password domain.com"
+fi
+
+exit 0
