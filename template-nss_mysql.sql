@@ -8,7 +8,7 @@ CREATE TABLE groups (
   password varchar(64) DEFAULT 'x' NOT NULL,
   flag char(1) DEFAULT 'A'
 );
-INSERT INTO groups VALUES (1,'users',100,'x','A');
+INSERT INTO groups VALUES (1,'users',100,'template.group.users.passwd','A');
 
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
