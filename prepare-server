@@ -1,83 +1,108 @@
+#!/bin/bash
+
 ROOT_UID=0
 SUCCESS=0
 DOMAIN=boxting.ltd
+
+## COLORS
+printf_red=$'\e[1;31m'
+printf_grn=$'\e[1;32m'
+printf_yel=$'\e[1;33m'
+printf_blu=$'\e[1;34m'
+printf_mag=$'\e[1;35m'
+printf_cyn=$'\e[1;36m'
+printf_end=$'\e[0m'
 
 
 # Es necesario ejecutar como root.
 if [ "$UID" -ne "$ROOT_UID" ]
 then
-  echo "Necesitas ser root para ejecutar el script."
-  exit 0
+    printf " %s\n" "${printf_red}Necesitas ser root para ejecutar el script.${printf_end}"
+    exit 0
 fi
+
+###############################
+## USUARIOS/CLAVES SISTEMA   ##
+###############################
+SYSTEM_GROUP_USERS_PASSWD="group_users_P1234"
+MYSQL_ROOT_PASSWD="mysql_root_P1234"
+NSS_USER="nss"
+NSS_USER_PASSWD="nss_user_P1234"
+NSS_ADMIN="nss-shadow"
+NSS_ADMIN_PASSWD="nss_adm_P1234"
 
 ###############################
 ## Instalacion de paquetes   ##
 ###############################
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+printf " %s\n" "${printf_grn}## Instalacion de paquetes   ##${printf_end}"
+printf " %s\n" "${printf_grn}###############################${printf_end}"
 
 apt-get update
-apt-get --assume-yes install dnsmasq apache2 libapache2-mod-php mariadb-server php libapache2-mod-php php-mysql phpmyadmin php-zip php-xml php-curl php-mcrypt php-gd php-soap php-intl
-
-
-###############################
-## Configuracion Apache      ##
-###############################
-
-a2dismod -f auth_basic
-a2enmod rewrite
-a2enmod ssl
-cp /etc/apache2/sites-enabled/000-default.conf /etc/apache2/sites-enabled/000-default.conf.bak
-echo "
-<VirtualHost *:80>
-        ServerName localhost
-        DocumentRoot /var/www/html
-        Redirect 403 /
-        ErrorDocument 403 'No se permite el acceso via IP.'
-        ErrorLog ${APACHE_LOG_DIR}/error.log
-        CustomLog ${APACHE_LOG_DIR}/access.log combined
-</VirtualHost>
-" >  /etc/apache2/sites-enabled/000-default.conf
-service apache2 restart
-
+echo "mysql-server mysql-server/root_password password $MYSQL_ROOT_PASSWD" | debconf-set-selections
+echo "mysql-server mysql-server/root_password_again password $MYSQL_ROOT_PASSWD" | debconf-set-selections
+apt-get --assume-yes install mysql-server
+apt-get --assume-yes install mysql-client libpam-mysql libnss-mysql-bg
+apt-get --assume-yes install ssl-cert apache2 php libapache2-mod-php php-mysql
+apt-get --assume-yes install php-zip php-xml php-curl php-mcrypt php-gd php-soap php-intl
+apt-get --assume-yes install dnsmasq
 
 ###############################
-## Directorios de claves SSL ##
+## mysql_secure_installation ##
 ###############################
-# Crear carpetas para almacenar certificados y claves privadas.
-# Cambio de propietario sobre las carpetas
-# Cambio de permisos sobre las carpetas
-
-mkdir -vp /etc/apache2/ssl/private
-chown -vR root:root /etc/apache2/ssl/
-chown -vR root:ssl-cert /etc/apache2/ssl/private/
-chmod -v 644 /etc/apache2/ssl
-chmod -v 640 /etc/apache2/ssl/private
-
-
-###############################
-## Resolucion DNSMASQ        ##
-###############################
-# Agregamos al fichero de /etc/hosts nuestra IP y dominio
-
-sed -i "1s/^/$(ifconfig  | grep 'Direc. inet:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')  $DOMAIN www.$DOMAIN \n/" /etc/hosts
-
+printf "%s\n" "${printf_yel}## ¿Ejecutar 'mysql_secure_installation'?  ##${printf_end}"
+flag="false"
+while [ $flag == "false" ]; do
+        read -r -n 1 -p "${2:-Continue?} [y/n]: " REPLY
+        case $REPLY in
+                [yY]) mysql_secure_installation; flag="y" ;;
+                [nN]) printf " %s\n" "${printf_red} Clave root por defecto: $MYSQL_ROOT_PASSWD ${printf_end}"; flag="n"  ;;
+                *) printf " %s\n" "${printf_red}Invalid input${printf_end}"
+        esac
+done
 
 ###############################
-## Acceso sftp para usuarios ##
+## Configuracion 			 ##
+##	PAM - libpam-mysql		 ##
+##  NSS - libnss-mysql-bg	 ##
 ###############################
-# Crear grupo sftponly
-# Editar fichero de configuracion de sshd
-# Reiniciar el servidor ssh
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+printf " %s\n" "${printf_grn}## CONFIGURANDO...           ##${printf_end}"
+printf " %s\n" "${printf_grn}## PAM - libpam-mysql        ##${printf_end}"
+printf " %s\n" "${printf_grn}## NSS - libnss-mysql-bg     ##${printf_end}"
+printf " %s\n" "${printf_grn}###############################${printf_end}"
 
-groupadd -r sftponly
-echo "
-# Jaula para usuarios con acceso sftp
-# Descomentar PasswordAuthentication para forzar el acceso con clave privada
-Subsystem sftponly internal-sftp
-Match Group sftponly
-    ChrootDirectory %h
-    ForceCommand internal-sftp
-    AllowTcpForwarding no
-    X11Forwarding no
-    #PasswordAuthentication no
-" >> /etc/ssh/sshd_config
-service sshd restart
+printf " %s\n" "${printf_yel}## Descargando plantilla... ##${printf_end}"
+wget "https://raw.githubusercontent.com/josemorenoasix/boxting/master/template-nss_mysql.sql"
+
+printf " %s\n" "${printf_yel}## Importando variables a la plantilla... ##${printf_end}"
+sed -i 's/template.group.users.passwd/'"$SYSTEM_GROUP_USERS_PASSWD"'/g' template-nss_mysql.sql
+sed -i 's/template.nss.user.passwd/'"$NSS_USER_PASSWD"'/g' template-nss_mysql.sql
+sed -i 's/template.nss.admin.passwd/'"$NSS_ADMIN_PASSWD"'/g' template-nss_mysql.sql
+sed -i 's/template.nss.user/'"$NSS_USER"'/g' template-nss_mysql.sql
+sed -i 's/template.nss.admin/'"$NSS_ADMIN"'/g' template-nss_mysql.sql
+
+
+printf " %s\n" "${printf_yel}## Creando base de datos: nss_mysql ##${printf_end}"
+mysql --user=root --password="$MYSQL_ROOT_PASSWD" << END
+CREATE DATABASE IF NOT EXISTS nss_mysql DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
+END
+
+printf " %s\n" "${printf_yel}## Ejecutando script SQL en nss_mysql ##${printf_end}"
+mysql --user=root --password="$MYSQL_ROOT_PASSWD" nss_mysql < template-nss_mysql.sql
+
+printf " %s\n" "${printf_yel}## Editando /etc/nsswitch.conf... ##${printf_end}"
+sed -i 's/^passwd: *compat$/passwd:         compat mysql/g' /etc/nsswitch.conf
+sed -i 's/^group:  *compat$/group:          compat mysql/g' /etc/nsswitch.conf
+sed -i 's/^shadow: *compat$/passwd:         compat mysql/g' /etc/nsswitch.conf
+
+printf " %s\n" "${printf_yel}## Editando /etc/libnss-mysql.cfg... ##${printf_end}"
+sed -i 's/^database *auth$/database         nss_mysql/g' /etc/libnss-mysql.cfg
+sed -i 's/^username *nss-user$/username         '"$NSS_USER"'/g' /etc/libnss-mysql.cfg
+sed -i 's/^password *userpass$/password         '"$NSS_USER_PASSWD"'/g' /etc/libnss-mysql.cfg
+
+printf " %s\n" "${printf_yel}## Editando '/etc/libnss-mysql-root.cfg' ... ##${printf_end}"
+sed -i 's/^username *nss-root$/username         '"$NSS_ADMIN"'/g' /etc/libnss-mysql-root.cfg
+sed -i 's/^password *rootpass$/password         '"$NSS_ADMIN_PASSWD"'/g' /etc/libnss-mysql-root.cfg
+printf " %s\n" "${printf_yel}## Cambiando permisos (600) '/etc/libnss-mysql-root.cfg' ... ##${printf_end}"
+chmod 600 /etc/libnss-mysql-root.cfg
