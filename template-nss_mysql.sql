@@ -1,3 +1,13 @@
+#
+#  Tipo de variables:
+#  Claves almacenadas con la funcion SHA1() - https://dev.mysql.com/doc/refman/5.7/en/encryption-functions.html#function_sha1
+#   password -> varchar(60)  
+#  Nombres de usuario limitados a 20 caracteres  
+#   name/username -> varchar(20) 
+#
+# http://libnss-mysql.sourceforge.net/libnss-mysql/sample/linux/sample_database.sql
+# http://www.tldp.org/LDP/lame/LAME/linux-admin-made-easy/shadow-file-formats.html 
+
 USE  template.nss.dbname;
 
 DROP TABLE IF EXISTS groups;
@@ -9,13 +19,6 @@ CREATE TABLE groups (
 ) ENGINE=MyISAM AUTO_INCREMENT=5000;
 
 DROP TABLE IF EXISTS users;
-/* 
-
-http://libnss-mysql.sourceforge.net/libnss-mysql/sample/linux/sample_database.sql
-http://www.tldp.org/LDP/lame/LAME/linux-admin-made-easy/shadow-file-formats.html 
-
-*/
-
 CREATE TABLE users (
   uid int(11) auto_increment primary key,
   username varchar(20) NOT NULL,
