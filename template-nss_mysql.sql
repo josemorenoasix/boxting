@@ -42,7 +42,7 @@ CREATE TABLE grouplist (
   gid int(11) NOT NULL,
   uid int(11) NOT NULL,
   username varchar(20) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=5000;
+) ENGINE=MyISAM;
 
 GRANT select(username,uid,gid,gecos,shell,homedir,flag) on users to 'template.nss.user'@localhost identified by 'template.nss.user.passwd';
 GRANT select(name,gid,password,flag) on groups to 'template.nss.user'@localhost identified by 'template.nss.user.passwd';
