@@ -1,4 +1,4 @@
-USE nss_mysql;
+
 
 DROP TABLE IF EXISTS groups;
 CREATE TABLE groups (
@@ -48,3 +48,8 @@ GRANT select(dbid,username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,
 GRANT update(dbid,username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,max,warn,inact,expire) on users to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
 
 FLUSH PRIVILEGES;
+
+INSERT INTO groups VALUES (2,'testing',10000,PASSWORD('1234'),'A');
+INSERT INTO users VALUES (1,'testing','testing purpose','/bin/bash',PASSWORD('1234'),'A',10000,10000,'/home/testing','','0','0','7','-1','-1');
+INSERT INTO grouplist VALUES (1,10000,10000,'testing');
+INSERT INTO grouplist VALUES (2,100,10000,'testing');
