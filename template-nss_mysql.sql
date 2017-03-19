@@ -58,4 +58,5 @@ GRANT Select (`username`, `gid`)
 GRANT Select (`username`, `gid`)
              ON `template.nss.dbname`.`grouplist`
              TO 'template.nss.admin'@'localhost';
+          
 FLUSH PRIVILEGES;
