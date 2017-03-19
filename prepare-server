@@ -24,9 +24,9 @@ fi
 ###############################
 ## USUARIOS/CLAVES SISTEMA   ##
 ###############################
-SYSTEM_GROUP_USERS_PASSWD="group_users_P1234"
 MYSQL_ROOT_PASSWD="mysql_root_P1234"
-NSS_USER="nss"
+NSS_DBNAME="nss_auth"
+NSS_USER="nss-user"
 NSS_USER_PASSWD="nss_user_P1234"
 NSS_ADMIN="nss-shadow"
 NSS_ADMIN_PASSWD="nss_adm_P1234"
@@ -82,20 +82,20 @@ printf " %s\n" "${printf_yel}## Descargando plantilla... ##${printf_end}"
 wget "https://raw.githubusercontent.com/josemorenoasix/boxting/master/template-nss_mysql.sql"
 
 printf " %s\n" "${printf_yel}## Importando variables a la plantilla... ##${printf_end}"
-sed -i 's/template.group.users.passwd/'"$SYSTEM_GROUP_USERS_PASSWD"'/g' template-nss_mysql.sql
+sed -i 's/template.nss.dbname/'"$NSS_DBNAME"'/g' template-nss_mysql.sql
 sed -i 's/template.nss.user.passwd/'"$NSS_USER_PASSWD"'/g' template-nss_mysql.sql
 sed -i 's/template.nss.admin.passwd/'"$NSS_ADMIN_PASSWD"'/g' template-nss_mysql.sql
 sed -i 's/template.nss.user/'"$NSS_USER"'/g' template-nss_mysql.sql
 sed -i 's/template.nss.admin/'"$NSS_ADMIN"'/g' template-nss_mysql.sql
 
 
-printf " %s\n" "${printf_yel}## Creando base de datos: nss_mysql ##${printf_end}"
+printf " %s\n" "${printf_yel}## Creando base de datos: $NSS_DBNAME ##${printf_end}"
 mysql --user=root --password="$MYSQL_ROOT_PASSWD" << END
-CREATE DATABASE IF NOT EXISTS nss_mysql DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
+CREATE DATABASE IF NOT EXISTS $NSS_DBNAME DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
 END
 
-printf " %s\n" "${printf_yel}## Ejecutando script SQL en nss_mysql ##${printf_end}"
-mysql --user=root --password="$MYSQL_ROOT_PASSWD" nss_mysql < template-nss_mysql.sql
+printf " %s\n" "${printf_yel}## Ejecutando script SQL en $NSS_DBNAME ##${printf_end}"
+mysql --user=root --password="$MYSQL_ROOT_PASSWD" "$NSS_DBNAME" < template-nss_mysql.sql
 
 printf " %s\n" "${printf_grn}###############################${printf_end}"
 printf " %s\n" "${printf_grn}## CONFIGURANDO...           ##${printf_end}"
@@ -110,7 +110,7 @@ sed -i 's/^shadow: *compat$/passwd:         compat mysql/g' /etc/nsswitch.conf
 
 printf " %s\n" "${printf_yel}## Editando /etc/libnss-mysql.cfg... ##${printf_end}"
 cp /etc/libnss-mysql.cfg /etc/libnss-mysql.cfg.orig
-sed -i 's/^database *auth$/database    nss_mysql/g' /etc/libnss-mysql.cfg
+sed -i 's/^database *auth$/database    '"$NSS_DBNAME"'/g' /etc/libnss-mysql.cfg
 sed -i 's/^username *nss-user$/username    '"$NSS_USER"'/g' /etc/libnss-mysql.cfg
 sed -i 's/^password *userpass$/password    '"$NSS_USER_PASSWD"'/g' /etc/libnss-mysql.cfg
 
@@ -133,7 +133,7 @@ mv /etc/pam-mysql.conf /etc/pam-mysql.conf.orig
 
 echo "
 users.host             = localhost
-users.database         = nss_mysql
+users.database         = $NSS_DBNAME
 users.db_user          = $NSS_USER
 users.db_passwd        = $NSS_USER_PASSWD
 users.table            = users
@@ -145,7 +145,7 @@ verbose (1)
 
 echo "
 users.host             = localhost
-users.database         = nss_mysql
+users.database         = $NSS_DBNAME
 users.db_user          = $NSS_ADMIN
 users.db_passwd        = $NSS_ADMIN_PASSWD
 users.table            = users
@@ -188,97 +188,3 @@ password        required        pam_unix.so nullok obscure sha512
 printf " %s\n" "${printf_yel}## Asegurando '/etc/pam.d/common-*' ... ##${printf_end}"
 chmod 600 /etc/pam.d/common-*
 
-
-
-
-
-#http://stackoverflow.com/questions/30741573/debconf-selections-for-phpmyadmin-unattended-installation-with-no-webserver-inst
-
-#MySQL application password for phpmyadmin:
-APP_PASS="pma_1234"
-
-ROOT_PASS="your-admin-db-pwd"
-APP_DB_PASS="your-app-db-pwd"
-
-echo "phpmyadmin phpmyadmin/dbconfig-install boolean true" | debconf-set-selections
-echo "phpmyadmin phpmyadmin/app-password-confirm password $APP_PASS" | debconf-set-selections
-echo "phpmyadmin phpmyadmin/mysql/admin-pass password $ROOT_PASS" | debconf-set-selections
-echo "phpmyadmin phpmyadmin/mysql/app-pass password $APP_DB_PASS" | debconf-set-selections
-echo "phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2" | debconf-set-selections
-apt-get --assume-yes install phpmyadmin
-
-
-
-
-
-
-
-###############################
-## Configuracion Apache      ##
-###############################
-
-a2dismod -f auth_basic
-a2enmod rewrite
-a2enmod ssl
-
-cp /etc/apache2/sites-enabled/000-default.conf /etc/apache2/sites-enabled/000-default.conf.bak
-echo "
-<VirtualHost *:80>
-        ServerName localhost
-        DocumentRoot /var/www/html
-        Redirect 403 /
-        ErrorDocument 403 'No se permite el acceso via IP.'
-        ErrorLog ${APACHE_LOG_DIR}/error.log
-        CustomLog ${APACHE_LOG_DIR}/access.log combined
-</VirtualHost>
-" >  /etc/apache2/sites-enabled/000-default.conf
-service apache2 restart
-
-
-###############################
-## Directorios de claves SSL ##
-###############################
-# Crear carpetas para almacenar certificados y claves privadas.
-# Cambio de propietario sobre las carpetas
-# Cambio de permisos sobre las carpetas
-
-mkdir -vp /etc/apache2/ssl/private
-chown -vR root:root /etc/apache2/ssl/
-chown -vR root:ssl-cert /etc/apache2/ssl/private/
-chmod -v 644 /etc/apache2/ssl
-chmod -v 640 /etc/apache2/ssl/private
-
-
-###############################
-## Resolucion DNSMASQ        ##
-###############################
-# Agregamos al fichero de /etc/hosts nuestra IP y dominio
-
-sed -i "1s/^/$(ifconfig  | grep 'Direc. inet:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')  $DOMAIN www.$DOMAIN \n/" /etc/hosts
-
-
-###############################
-## Acceso sftp para usuarios ##
-###############################
-# Crear grupo sftponly
-# Editar fichero de configuracion de sshd
-# Reiniciar el servidor ssh
-
-groupadd -r sftponly
-echo "
-# Jaula para usuarios con acceso sftp
-# Descomentar PasswordAuthentication para forzar el acceso con clave privada
-Subsystem sftponly internal-sftp
-Match Group sftponly
-    ChrootDirectory %h
-    ForceCommand internal-sftp
-    AllowTcpForwarding no
-    X11Forwarding no
-    #PasswordAuthentication no
-" >> /etc/ssh/sshd_config
-service sshd restart
-
-wget "https://raw.githubusercontent.com/josemorenoasix/boxting/master/create-hosting-user"
-wget "https://raw.githubusercontent.com/josemorenoasix/boxting/master/template" -O /etc/apache2/sites-enabled/000-default
-chmod u+x prepare-server
-mv /
