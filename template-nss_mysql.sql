@@ -2,13 +2,11 @@ USE  template.nss.dbname;
 
 DROP TABLE IF EXISTS groups;
 CREATE TABLE groups (
-  dbid int(11) NOT NULL auto_increment primary key,
+  gid int(11) auto_increment primary key,
   name varchar(30) DEFAULT '' NOT NULL,
-  gid int(11) NOT NULL,
-  password varchar(64) DEFAULT 'x' NOT NULL,
+  password varchar(60) DEFAULT 'x' NOT NULL,
   flag char(1) DEFAULT 'A'
-);
-INSERT INTO groups VALUES (1,'users',100,SHA('users_pass'),'A');
+); ENGINE=MyISAM AUTO_INCREMENT=5000;
 
 DROP TABLE IF EXISTS users;
 /* 
@@ -17,23 +15,23 @@ http://libnss-mysql.sourceforge.net/libnss-mysql/sample/linux/sample_database.sq
 http://www.tldp.org/LDP/lame/LAME/linux-admin-made-easy/shadow-file-formats.html 
 
 */
+
 CREATE TABLE users (
-  dbid int(11) NOT NULL auto_increment primary key,
-  username varchar(50) DEFAULT '' NOT NULL,
-  gecos varchar(40) DEFAULT '' NOT NULL,
-  shell varchar(20) DEFAULT '/bin/sh' NOT NULL,
-  password varchar(60) DEFAULT '' NOT NULL,
+  uid int(11) auto_increment primary key,
+  username varchar(50) NOT NULL,
+  gecos varchar(40) DEFAULT 'SSHmySQL User' NOT NULL,
+  shell varchar(20) NOT NULL,
+  password varchar(60) NOT NULL,
   flag char(1) DEFAULT 'N' NOT NULL,
-  uid int(11) NOT NULL,
-  gid int(11) NOT NULL,
-  homedir varchar(64) DEFAULT '/bin/sh' NOT NULL,
+  gid int(11) auto_increment NOT NULL,
+  homedir varchar(64) NOT NULL,
   lstchg varchar(50) NOT NULL default '',
   min int(11) NOT NULL default '0',
   max int(11) NOT NULL default '0',
   warn int(11) NOT NULL default '7',
   inact int(11) NOT NULL default '-1',
   expire int(11) NOT NULL default '-1'
-);
+); ENGINE=MyISAM AUTO_INCREMENT=5000;
 
 DROP TABLE IF EXISTS grouplist;
 CREATE TABLE grouplist (
@@ -41,21 +39,21 @@ CREATE TABLE grouplist (
   gid int(11) DEFAULT '0' NOT NULL,
   uid int(11) DEFAULT '0' NOT NULL,
   username varchar(50) DEFAULT '' NOT NULL
-);
+); ENGINE=MyISAM AUTO_INCREMENT=5000;
 
-GRANT select(dbid,username,uid,gid,gecos,shell,homedir,flag) on users to 'template.nss.user'@localhost identified by 'template.nss.user.passwd';
-GRANT select(dbid,name,gid,password,flag) on groups to 'template.nss.user'@localhost identified by 'template.nss.user.passwd';
+GRANT select(username,uid,gid,gecos,shell,homedir,flag) on users to 'template.nss.user'@localhost identified by 'template.nss.user.passwd';
+GRANT select(name,gid,password,flag) on groups to 'template.nss.user'@localhost identified by 'template.nss.user.passwd';
 GRANT select(dbid,gid,uid,username) on grouplist to 'template.nss.user'@localhost identified by 'template.nss.user.passwd';
-GRANT select(dbid,username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,max,warn,inact,expire) on users to 'template.nss.user'@localhost identified by 'template.nss.user.passwd';
-GRANT select(dbid,username,uid,gid,gecos,shell,homedir,flag) on users to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
-GRANT select(dbid,name,gid,password,flag) on groups to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
+GRANT select(username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,max,warn,inact,expire) on users to 'template.nss.user'@localhost identified by 'template.nss.user.passwd';
+GRANT select(username,uid,gid,gecos,shell,homedir,flag) on users to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
+GRANT select(name,gid,password,flag) on groups to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
 GRANT select(dbid,gid,uid,username) on grouplist to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
-GRANT select(dbid,username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,max,warn,inact,expire) on users to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
-GRANT update(dbid,username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,max,warn,inact,expire) on users to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
+GRANT select(username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,max,warn,inact,expire) on users to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
+GRANT update(username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,max,warn,inact,expire) on users to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
 
 FLUSH PRIVILEGES;
 
-INSERT INTO groups VALUES (2,'testing',10000,SHA('1234'),'A');
-INSERT INTO users VALUES (1,'testing','testing purpose','/bin/bash',SHA('1234'),'A',10000,10000,'/home/testing','','0','0','7','-1','-1');
-INSERT INTO grouplist VALUES (1,10000,10000,'testing');
-INSERT INTO grouplist VALUES (2,100,10000,'testing');
+INSERT INTO groups VALUES ('testing', SHA('1234'));
+INSERT INTO users VALUES ('testing','/bin/bash',SHA('1234'),'A','/home/testing');
+INSERT INTO grouplist VALUES (1,5000,5000,'testing');
+INSERT INTO grouplist VALUES (2,100,5000,'testing');
