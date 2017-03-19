@@ -22,7 +22,7 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users (
   uid int(11) auto_increment primary key,
   username varchar(20) NOT NULL,
-  gecos varchar(40) DEFAULT 'SSHmySQL User' NOT NULL,
+  gecos varchar(40) DEFAULT 'SSH-SQL-USER' NOT NULL,
   shell varchar(20) NOT NULL,
   password varchar(60) NOT NULL,
   flag char(1) DEFAULT 'Y' NOT NULL,
@@ -59,5 +59,5 @@ FLUSH PRIVILEGES;
 INSERT INTO groups (gid,name,password) VALUES ('4999','nss-group',SHA('1234'));
 INSERT INTO groups (name,password) VALUES ('testing',SHA('1234'));
 INSERT INTO users (username,shell,password,homedir) VALUES ('testing','/bin/bash',SHA('1234'),'/home/testing');
-INSERT INTO grouplist VALUES (1,5000,5000,'testing');
-INSERT INTO grouplist VALUES (2,100,5000,'testing');
+INSERT INTO grouplist (gid,uid,username) VALUES (5000,5000,'testing');
+INSERT INTO grouplist (gid,uid,username) VALUES (4999,5000,'testing');
