@@ -6,14 +6,14 @@ CREATE TABLE groups (
   password varchar(34) NOT NULL default 'x',
   gid smallint NOT NULL auto_increment,
   PRIMARY KEY  (gid)
-) TYPE=MyISAM AUTO_INCREMENT=5000;
+) ENGINE=MyISAM AUTO_INCREMENT=5000;
 
 CREATE TABLE grouplist (
   rowid smallint NOT NULL auto_increment,
   gid smallint NOT NULL default '0',
   username char(16) NOT NULL default '',
   PRIMARY KEY  (rowid)
-) TYPE=MyISAM;
+) ENGINE=MyISAM;
 
 CREATE TABLE users (
   username varchar(20) NOT NULL default '',
@@ -24,7 +24,7 @@ CREATE TABLE users (
   PRIMARY KEY (uid),
   UNIQUE KEY username (username),
   KEY uid (uid)
-) TYPE=MyISAM AUTO_INCREMENT=5000;
+) ENGINE=MyISAM AUTO_INCREMENT=5000;
 
 # Algunos datos ...
 INSERT INTO users (username, password)
