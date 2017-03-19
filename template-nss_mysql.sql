@@ -1,4 +1,4 @@
-USE nss_mysql;
+USE  template.nss.dbname;
 
 DROP TABLE IF EXISTS groups;
 CREATE TABLE groups (
