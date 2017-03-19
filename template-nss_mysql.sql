@@ -49,7 +49,7 @@ GRANT update(dbid,username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,
 
 FLUSH PRIVILEGES;
 
-INSERT INTO groups VALUES (2,'testing',10000,PASSWORD('1234'),'A');
-INSERT INTO users VALUES (1,'testing','testing purpose','/bin/bash',PASSWORD('1234'),'A',10000,10000,'/home/testing','','0','0','7','-1','-1');
+INSERT INTO groups VALUES (2,'testing',10000,'1234','A');
+INSERT INTO users VALUES (1,'testing','testing purpose','/bin/bash','1234','A',10000,10000,'/home/testing','','0','0','7','-1','-1');
 INSERT INTO grouplist VALUES (1,10000,10000,'testing');
 INSERT INTO grouplist VALUES (2,100,10000,'testing');
