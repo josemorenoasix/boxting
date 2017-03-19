@@ -78,9 +78,6 @@ printf " %s\n" "${printf_grn}## CONFIGURANDO...           ##${printf_end}"
 printf " %s\n" "${printf_grn}## MySQL                     ##${printf_end}"
 printf " %s\n" "${printf_grn}###############################${printf_end}"
 
-cp -ax /etc/skel /home/testing
-chown -R testing:testing /home/testing
-
 printf " %s\n" "${printf_yel}## Descargando plantilla... ##${printf_end}"
 wget "https://raw.githubusercontent.com/josemorenoasix/boxting/master/template-nss_mysql.sql"
 
@@ -191,4 +188,5 @@ password        required        pam_unix.so nullok obscure sha512
 printf " %s\n" "${printf_yel}## Asegurando '/etc/pam.d/common-*' ... ##${printf_end}"
 chmod 600 /etc/pam.d/common-*
 
-
+cp -ax /etc/skel /home/testing
+chown -R testing:testing /home/testing
