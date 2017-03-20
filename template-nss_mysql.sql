@@ -55,3 +55,4 @@ GRANT select(username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,max,w
 GRANT update(username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,max,warn,inact,expire) on users to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
 
 FLUSH PRIVILEGES;
+
