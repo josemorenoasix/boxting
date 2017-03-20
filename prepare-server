@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ROOT_UID=0
 SUCCESS=0
 DOMAIN=boxting.ltd
@@ -46,15 +48,6 @@ apt-get --assume-yes install php-zip php-xml php-curl php-mcrypt php-gd php-soap
 apt-get --assume-yes install dnsmasq
 apt-get --assume-yes install pure-ftpd
 apt-get --assume-yes install build-essential autoconf automake libtool flex bison debhelper binutils-gold python
-
-wget http://olivier.sessink.nl/jailkit/jailkit-2.19.tar.gz --directory-prefix=/tmp
-tar /tmp/zxvf jailkit-2.19.tar.gz
-./tmp/jailkit-2.19/debian/rules binary
-dpkg -i /tmp/jailkit-2.19/jailkit_2.19-1_amd64.deb
-mkdir /jail
-jk_init -v /jail netutils basicshell jk_lsh openvpn ssh sftp
-
-
 wget https://launchpad.net/ubuntu/+source/pam-mysql/0.7~RC1-4ubuntu2.1/+build/12134797/+files/libpam-mysql_0.7~RC1-4ubuntu2.1_amd64.deb
 dpkg -i libpam-mysql_0.7~RC1-4ubuntu2.1_amd64.deb
 apt-get update
@@ -64,16 +57,29 @@ dpkg -i libpam-mysql_0.7~RC1-4ubuntu2.1_amd64.deb
 ###############################
 ## mysql_secure_installation ##
 ###############################
-printf "%s\n" "${printf_yel}## ¿Ejecutar 'mysql_secure_installation'?  ##${printf_end}"
-flag="false"
-while [ $flag == "false" ]; do
-        read -r -n 1 -p "${2:-Continue?} [y/n]: " REPLY
-        case $REPLY in
-                [yY]) mysql_secure_installation; flag="y" ;;
-                [nN]) printf " %s\n" "${printf_red} Clave root por defecto: $MYSQL_ROOT_PASSWD ${printf_end}"; flag="n"  ;;
-                *) printf " %s\n" "${printf_red}Invalid input${printf_end}"
-        esac
-done
+#printf "%s\n" "${printf_yel}## ¿Ejecutar 'mysql_secure_installation'?  ##${printf_end}"
+#flag="false"
+#while [ $flag == "false" ]; do
+#        read -r -n 1 -p "${2:-Continue?} [y/n]: " REPLY
+#        case $REPLY in
+#                [yY]) mysql_secure_installation; flag="y" ;;
+#                [nN]) printf " %s\n" "${printf_red} Clave root por defecto: $MYSQL_ROOT_PASSWD ${printf_end}"; flag="n"  ;;
+#                *) printf " %s\n" "${printf_red}Invalid input${printf_end}"
+#        esac
+#done
+
+###############################
+## Instalacion de paquetes   ##
+###############################
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+printf " %s\n" "${printf_grn}## Instalacion de jailkit   ##${printf_end}"
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+wget http://olivier.sessink.nl/jailkit/jailkit-2.19.tar.gz --directory-prefix=/tmp
+tar /tmp/zxvf jailkit-2.19.tar.gz
+./tmp/jailkit-2.19/debian/rules binary
+dpkg -i /tmp/jailkit-2.19/jailkit_2.19-1_amd64.deb
+mkdir /jail
+jk_init -v /jail netutils basicshell jk_lsh openvpn ssh sftp
 
 ###############################
 ## Configuracion             ##
@@ -212,6 +218,11 @@ chmod 600 /etc/pam.d/common-*
 # Cambio de permisos sobre las carpetas
 # Obtiene los usuarios desde mySQL.
 
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+printf " %s\n" "${printf_grn}## CONFIGURANDO...           ##${printf_end}"
+printf " %s\n" "${printf_grn}## pure-ftped                ##${printf_end}"
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+
 SUBJ_C="ES"
 SUBJ_ST="Province"
 SUBJ_L="City"
@@ -240,6 +251,11 @@ service pure-ftpd restart
 # Cambio de propietario sobre las carpetas
 # Cambio de permisos sobre las carpetas
 
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+printf " %s\n" "${printf_grn}## CREANDO...                ##${printf_end}"
+printf " %s\n" "${printf_grn}## Directorios SSL/Apache    ##${printf_end}"
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+
 mkdir -vp /etc/apache2/ssl/private
 chown -vR root:root /etc/apache2/ssl/
 chown -vR root:ssl-cert /etc/apache2/ssl/private/
@@ -252,6 +268,11 @@ chmod -v 640 /etc/apache2/ssl/private
 # Agregamos al fichero de /etc/hosts nuestra IP y dominio.
 # Cualquier cliente con nuestro DNS configurado accede via: dominio.ltd
 
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+printf " %s\n" "${printf_grn}## CONFIGURANDO...           ##${printf_end}"
+printf " %s\n" "${printf_grn}## dnsmasq                   ##${printf_end}"
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+
 sed -i "1s/^/$(ifconfig  | grep 'Direc. inet:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')  $DOMAIN www.$DOMAIN \n/" /etc/hosts
 
 
@@ -261,8 +282,12 @@ sed -i "1s/^/$(ifconfig  | grep 'Direc. inet:'| grep -v '127.0.0.1' | cut -d: -f
 # Crear grupo sftponly
 # Editar fichero de configuracion de sshd
 # Reiniciar el servidor ssh
-
-groupadd -r sftponly
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+printf " %s\n" "${printf_grn}## CONFIGURANDO...           ##${printf_end}"
+printf " %s\n" "${printf_grn}## Acceso sftponly usuarios  ##${printf_end}"
+printf " %s\n" "${printf_grn}# (Ususarios sin acceso SSH) #${printf_end}"
+printf " %s\n" "${printf_grn}###############################${printf_end}"
+groupadd -r sftponly --gid 4999
 echo "
 # Jaula para usuarios con acceso sftp
 # Descomentar PasswordAuthentication para forzar el acceso con clave privada
