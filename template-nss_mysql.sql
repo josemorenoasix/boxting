@@ -17,12 +17,13 @@ CREATE TABLE groups (
   password varchar(60) DEFAULT 'x' NOT NULL,
   flag char(1) DEFAULT 'A'
 ) ENGINE=MyISAM AUTO_INCREMENT=5000;
+INSERT INTO groups (gid,name,password) VALUES ('4999','nss-account-group',SHA('$password'));
 
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
   uid int(11) auto_increment primary key,
-  username varchar(20) NOT NULL,
-  gecos varchar(40) DEFAULT 'SSH-SQL-USER' NOT NULL,
+  username varchar(20) UNIQUE NOT NULL,
+  gecos varchar(40) DEFAULT 'nss-account-user' NOT NULL,
   shell varchar(20) NOT NULL,
   password varchar(60) NOT NULL,
   flag char(1) DEFAULT 'Y' NOT NULL,
