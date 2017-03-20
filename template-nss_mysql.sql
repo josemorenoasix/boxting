@@ -17,7 +17,7 @@ CREATE TABLE groups (
   password varchar(60) DEFAULT 'x' NOT NULL,
   flag char(1) DEFAULT 'A'
 ) ENGINE=MyISAM AUTO_INCREMENT=5000;
-INSERT INTO groups (gid,name) VALUES ('4999','jailgroup');
+
 
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
@@ -27,7 +27,7 @@ CREATE TABLE users (
   shell varchar(40) NOT NULL,
   password varchar(60) NOT NULL,
   flag char(1) DEFAULT 'Y' NOT NULL,
-  gid int(11) DEFAULT '4999' NOT NULL,
+  gid int(11) NOT NULL,
   homedir varchar(64) NOT NULL,
   lstchg varchar(50) NOT NULL default '',
   min int(11) NOT NULL default '0',
