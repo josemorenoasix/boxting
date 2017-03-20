@@ -24,7 +24,7 @@ CREATE TABLE users (
   uid int(11) auto_increment primary key,
   username varchar(20) UNIQUE NOT NULL,
   gecos varchar(40) DEFAULT 'nss-account-user' NOT NULL,
-  shell varchar(20) NOT NULL,
+  shell varchar(40) NOT NULL,
   password varchar(60) NOT NULL,
   flag char(1) DEFAULT 'Y' NOT NULL,
   gid int(11) DEFAULT '4999' NOT NULL,
