@@ -55,9 +55,3 @@ GRANT select(username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,max,w
 GRANT update(username,password,uid,gid,gecos,shell,homedir,flag,lstchg,min,max,warn,inact,expire) on users to 'template.nss.admin'@localhost identified by 'template.nss.admin.passwd';
 
 FLUSH PRIVILEGES;
-
-INSERT INTO groups (gid,name,password) VALUES ('4999','nss-group',SHA('1234'));
-INSERT INTO groups (name,password) VALUES ('testing',SHA('1234'));
-INSERT INTO users (username,shell,password,homedir) VALUES ('testing','/bin/bash',SHA('1234'),'/home/testing');
-INSERT INTO grouplist (gid,uid,username) VALUES (5000,5000,'testing');
-INSERT INTO grouplist (gid,uid,username) VALUES (4999,5000,'testing');
