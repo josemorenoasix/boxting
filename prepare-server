@@ -1,5 +1,3 @@
-#!/bin/bash
-
 ROOT_UID=0
 SUCCESS=0
 DOMAIN=boxting.ltd
@@ -46,6 +44,16 @@ apt-get --assume-yes install mysql-client libpam-mysql libnss-mysql-bg
 apt-get --assume-yes install ssl-cert apache2 php libapache2-mod-php php-mysql
 apt-get --assume-yes install php-zip php-xml php-curl php-mcrypt php-gd php-soap php-intl
 apt-get --assume-yes install dnsmasq
+apt-get --assume-yes install pure-ftpd
+apt-get --assume-yes install build-essential autoconf automake libtool flex bison debhelper binutils-gold python
+
+wget http://olivier.sessink.nl/jailkit/jailkit-2.19.tar.gz --directory-prefix=/tmp
+tar /tmp/zxvf jailkit-2.19.tar.gz
+./tmp/jailkit-2.19/debian/rules binary
+dpkg -i /tmp/jailkit-2.19/jailkit_2.19-1_amd64.deb
+mkdir /jail
+jk_init -v /jail netutils basicshell jk_lsh openvpn ssh sftp
+
 
 wget https://launchpad.net/ubuntu/+source/pam-mysql/0.7~RC1-4ubuntu2.1/+build/12134797/+files/libpam-mysql_0.7~RC1-4ubuntu2.1_amd64.deb
 dpkg -i libpam-mysql_0.7~RC1-4ubuntu2.1_amd64.deb
@@ -72,7 +80,6 @@ done
 ##	PAM - libpam-mysql       ##
 ##  NSS - libnss-mysql-bg    ##
 ###############################
-
 printf " %s\n" "${printf_grn}###############################${printf_end}"
 printf " %s\n" "${printf_grn}## CONFIGURANDO...           ##${printf_end}"
 printf " %s\n" "${printf_grn}## MySQL                     ##${printf_end}"
@@ -121,6 +128,10 @@ sed -i 's/^password *rootpass$/password         '"$NSS_ADMIN_PASSWD"'/g' /etc/li
 printf " %s\n" "${printf_yel}## Cambiando permisos (600) '/etc/libnss-mysql-root.cfg' ... ##${printf_end}"
 chmod 600 /etc/libnss-mysql-root.cfg
 
+###############################
+## Configuracion             ##
+##	PAM - libpam-mysql       ##
+###############################
 printf " %s\n" "${printf_grn}###############################${printf_end}"
 printf " %s\n" "${printf_grn}## CONFIGURANDO...           ##${printf_end}"
 printf " %s\n" "${printf_grn}## PAM - libpam-mysql        ##${printf_end}"
@@ -188,5 +199,79 @@ password        required        pam_unix.so nullok obscure sha512
 printf " %s\n" "${printf_yel}## Asegurando '/etc/pam.d/common-*' ... ##${printf_end}"
 chmod 600 /etc/pam.d/common-*
 
-cp -ax /etc/skel /home/testing
-chown -R testing:testing /home/testing
+
+###############################
+## Configuracion pure-ftpd  ##
+###############################
+# Crear carpetas para almacenar el certificados,
+# y claves publcio/privadas del servidor FTP.
+# Cifrado SSL/TLS activado.
+# Limite de conexiones simultaneas.
+# No permitido usuarios anonimos.
+# Enjaular usuarios.
+# Cambio de permisos sobre las carpetas
+# Obtiene los usuarios desde mySQL.
+
+SUBJ_C="ES"
+SUBJ_ST="Province"
+SUBJ_L="City"
+SUBJ_O="$DOMAIN"
+SUBJ_OU="$DOMAIN SSL Unit"
+SUBJ_CN="$DOMAIN"
+
+mkdir -p /etc/ssl/private/
+openssl req -new -newkey rsa:4096 -days 97300 -nodes -x509 -subj "/C=$SUBJ_C/ST=$SUBJ_ST/L=$SUBJ_L/O=$SUBJ_O/OU=$SUBJ_OU/CN=$SUBJ_CN" -keyout /etc/ssl/private/pure-ftpd.pem -out /etc/ssl/private/pure-ftpd.pem
+chmod 600 /etc/ssl/private/pure-ftpd.pem
+
+echo '20000 20099' > /etc/pure-ftpd/conf/PassivePortRange
+echo "yes" > /etc/pure-ftpd/conf/NoAnonymous
+echo "yes" > /etc/pure-ftpd/conf/ChrootEveryone
+echo "yes" > /etc/pure-ftpd/conf/IPV4Only
+echo "2" > /etc/pure-ftpd/conf/TLS
+echo "auth    sufficient      pam_mysql.so config_file=/etc/pam-mysql-shadow.conf sense=deny file=/etc/ftpusers onerr=succeed" >> /etc/pam.d/pure-ftpd
+service pure-ftpd restart
+
+
+###############################
+## Directorios de claves SSL ##
+###############################
+# Crear carpetas para almacenar los certificados,
+# y claves publcio/privadas de cada dominio.
+# Cambio de propietario sobre las carpetas
+# Cambio de permisos sobre las carpetas
+
+mkdir -vp /etc/apache2/ssl/private
+chown -vR root:root /etc/apache2/ssl/
+chown -vR root:ssl-cert /etc/apache2/ssl/private/
+chmod -v 644 /etc/apache2/ssl
+chmod -v 640 /etc/apache2/ssl/private
+
+###############################
+## Resolucion DNSMASQ        ##
+###############################
+# Agregamos al fichero de /etc/hosts nuestra IP y dominio.
+# Cualquier cliente con nuestro DNS configurado accede via: dominio.ltd
+
+sed -i "1s/^/$(ifconfig  | grep 'Direc. inet:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')  $DOMAIN www.$DOMAIN \n/" /etc/hosts
+
+
+###############################
+## Acceso sftp para usuarios ##
+###############################
+# Crear grupo sftponly
+# Editar fichero de configuracion de sshd
+# Reiniciar el servidor ssh
+
+groupadd -r sftponly
+echo "
+# Jaula para usuarios con acceso sftp
+# Descomentar PasswordAuthentication para forzar el acceso con clave privada
+Subsystem sftponly internal-sftp
+Match Group sftponly
+    ChrootDirectory %h
+    ForceCommand internal-sftp
+    AllowTcpForwarding no
+    X11Forwarding no
+    #PasswordAuthentication no
+" >> /etc/ssh/sshd_config
+service sshd restart
